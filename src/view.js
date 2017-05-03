@@ -104,9 +104,9 @@ const renderSubheadRow = (title) => {
 
 const renderBinaryCell = (value) => {
 	if (value) {
-		return components.fa({icon:"check", title:"yes"})
+		return <span>{components.fa({ icon:"check", title:"yes" })}</span>
 	} else if (value === false) {
-		return components.fa({icon:"times", title:"no"})
+		return <span>{components.fa({ icon:"times", title:"no" })}</span>
 	} else {
 		return "-"
 	}
@@ -167,7 +167,7 @@ const renderFeatureRows = (model, actions) => {
 		let body = model.featureSupport[feature.name][sandbox];
 		if (feature.type != "text") 			
 			body = renderBinaryCell(body);
-		return components.column({width:colWidth, body:body, key:key});
+		return components.column({ width:colWidth, body, key });
 	}
 
 	return rows.map( (feature, i) => {
@@ -184,7 +184,7 @@ const renderFeatureRows = (model, actions) => {
 		const renderedNotes = hasNotes && notesVisible ? components.notes(notes) : null;
 
 		return components.row({
-			className: (i%2 ? "zebra" : ""), key:i,
+			className: (i%2 ? "zebra data" : "data"), key:i,
 			body: [title, columns, renderedNotes]
 		});
 	})
@@ -201,12 +201,9 @@ const renderResourceCell = (resourceDetail) => {
 		return components.emptyCell;
 	}
 
-	const icons = codeToIcon.filter( icon => {
-		return (resourceDetail.interaction.find( c => c.code === icon[0] ))
-	})
-
-	return icons.map( (i, k) => {
-		return components.fa({icon: i[1], title: i[0], fixedWidth:true, spaceAfter: k < icons.length-1})
+	return codeToIcon.map( (i, k) => {
+		const visible = (resourceDetail.interaction.find( c => c.code === i[0] ))
+		return components.fa({icon: i[1], visible: visible, title: i[0], fixedWidth:true, spaceAfter: k < codeToIcon.length-1})
 	})
 }
 
@@ -248,7 +245,7 @@ const renderParamRows = (model, resource, notesVisible, className) => {
 	}
 
 	let hasParamNotes;
-	const rows = Object.keys(model.resourceSupport[resource].searchParam).map( (param, i) => {
+	const rows = Object.keys(model.resourceSupport[resource].searchParam).sort().map( (param, i) => {
 		let notes = [];
 		const columns = mapColumns(model, (sandbox, j, colWidth) => {
 			const sandboxNotes = _notesRenderer(model, sandbox, resource, param);
@@ -281,20 +278,29 @@ const renderResourceRows = (model, actions) => {
 
 	const _cellRenderer = (model, sandbox, resource, colWidth, key) => {
 		const value = renderResourceCell(model.resourceSupport[resource][sandbox]);
-		return components.column({width:colWidth, body:value, key:key});
+		return components.column({
+			width:colWidth, 
+			body:value,
+			key:key
+		});
 	}
 
 	return Object.keys(model.resourceSupport).sort().map( (resource, i) => {
 		let notes = [];
+		let hasContent;
 		const columns = mapColumns(model, (sandbox, j, colWidth) => {
+			if (model.resourceSupport[resource][sandbox]) hasContent = true;
 			const sandboxNotes = _notesRenderer(model, sandbox, resource);
 			notes = notes.concat(sandboxNotes);
 			return _cellRenderer(model, sandbox, resource, colWidth, j);
 		});
+		
+		//after removing column, may still have keys but no longer used
+		if (!hasContent) return;
 
 		const hasResourceNotes = notes.length > 0;
 		const notesVisible = model.resourceSupport[resource].notesVisible;
-		const className =  i%2 ? "zebra" : "";
+		const className =  i%2 ? "zebra data" : "data";
 
 		const hasParams = model.resourceSupport[resource].searchParam ? true : false;
 		const paramsVisible = model.resourceSupport[resource].paramsVisible;
